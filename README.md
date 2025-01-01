@@ -24,12 +24,12 @@ def zeropower_via_newtonschulz5(G, steps):
     if G.size(0) > G.size(1):
         X = X.T
 
-+    X = (G.T.type_as(X) @ X).norm() * X  # scale orthogonalized gradient by the dual norm of the original gradient
++    X = (G.T.type_as(X) @ X).trace() * X  # scale orthogonalized gradient by the dual norm of the original gradient
     return X
 ```
 
 ![](images/muon_by_momentum_decay_optimized_coeffs.png)
-![](images/adaptive_muon_by_momentum_decay_optimized_coeffs_opt.png)
+![](images/adaptive_muon_by_momentum_decay.png)
 
 ## Installation
 
