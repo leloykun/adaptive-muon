@@ -1,8 +1,8 @@
 # Adaptive Muon [WIP]
 
-A one-line modification to [@KellerJordan](https://github.com/KellerJordan)'s [Muon optimizer](https://github.com/KellerJordan/modded-nanogpt) that helps it adapt to the scale of the gradients. This is done by scaling the orthogonalized gradient by the dual norm of the original gradient according to the maths in [@jxbz](https://github.com/jxbz)'s and co's paper, [Modular Duality in Deep Learning](https://arxiv.org/abs/2410.21265).
+A one-line modification to [@KellerJordan](https://github.com/KellerJordan)'s [Muon optimizer](https://github.com/KellerJordan/modded-nanogpt) that allows the optimizer to adapt to the scale of the gradients as they change during training. This is done by scaling the orthogonalized gradient by the dual norm of the original gradient. The justification for this can be found in [@jxbz](https://github.com/jxbz)'s and co's papers, [Old Optimizer, New Norm: An Anthology](https://arxiv.org/abs/2409.20325) and [Modular Duality in Deep Learning](https://arxiv.org/abs/2410.21265).
 
-The following is the one-line diff to the original implementation. However, all of my benchmarks were done and will be done using [my JAX implementation](https://github.com/google-deepmind/optax/pull/1126).
+The following is the one-line diff to the original implementation. Note however, that all of my benchmarks were done using [my JAX implementation](https://github.com/google-deepmind/optax/pull/1126) and so there may be slight differences in performance & stability between the two implementations.
 
 ```diff
 def zeropower_via_newtonschulz5(G, steps):
@@ -24,12 +24,13 @@ def zeropower_via_newtonschulz5(G, steps):
     if G.size(0) > G.size(1):
         X = X.T
 
-+    X = (G.T.type_as(X) @ X).trace() * X  # scale orthogonalized gradient by the dual norm of the original gradient
++    X = (G.T.type_as(X) @ X).float().trace().bfloat16() * X  # Adaptive scaling; Note: trace(.) is not yet supported for bfloat16
     return X
 ```
 
 ![](images/muon_by_momentum_decay_optimized_coeffs.png)
 ![](images/adaptive_muon_by_momentum_decay.png)
+![](images/adaptive_muon_by_momentum_decay_bfloat16.png)
 
 ## Installation
 
@@ -64,7 +65,7 @@ optimizer = optax.chain(
             (2.8317, -4.0251, 2.1928),
             (2.8392, -3.3535, 1.5149),
         ),
-        beta=0.0,
+        beta=0.95,
         adaptive=True,
     )
 )
@@ -80,4 +81,4 @@ def body_fn(values: tuple[jnp.ndarray, optax.OptState], _):
 (trained_params, _), losses = jax.lax.scan(body_fn, (params, opt_state), length=num_steps)
 ```
 
-Note: the optimized coefficients here were obtained via a separate method I'll be sharing soon.
+Note: the optimized coefficients here were obtained via a separate method I'll be sharing soon. It's a WIP and so you should just use the default coefficients for now (i.e. you can omit the `newton_schulz_coeffs` argument above).
