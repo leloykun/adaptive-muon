@@ -55,26 +55,25 @@ from optax.contrib import muon
 loss_fn = ...
 loss_and_grad_fn = jax.value_and_grad(loss_fn)
 
-optimizer = optax.chain(
-    muon(
-        learning_rate=0.1,
-        newton_schulz_coeffs=(
-            (2.9145, -4.3663, 2.4515),
-            (2.9131, -4.3582, 2.4446),
-            (2.9030, -4.3145, 2.4106),
-            (2.8317, -4.0251, 2.1928),
-            (2.8392, -3.3535, 1.5149),
-        ),
-        beta=0.95,
-        adaptive=True,
-    )
+optimizer = muon(
+    learning_rate=0.1,
+    ns_coeffs=(
+        (2.9145, -4.3663, 2.4515),
+        (2.9131, -4.3582, 2.4446),
+        (2.9030, -4.3145, 2.4106),
+        (2.8317, -4.0251, 2.1928),
+        (2.8392, -3.3535, 1.5149),
+    ),
+    beta=0.95,
+    adaptive=True,
 )
 opt_state = optimizer.init(params)
 
 def body_fn(values: tuple[jnp.ndarray, optax.OptState], _):
     params, opt_state = values
     loss, grad = loss_and_grad_fn(x, params, slope_weight)
-    updates, opt_state = optimizer.update(grad, opt_state)
+    # Note that Muon is a multi-transform optimizer and so we also need to pass the params to `update`
+    updates, opt_state = optimizer.update(grad, opt_state, params)
     new_params = optax.apply_updates(params, updates)
     return (new_params, opt_state), loss
 
