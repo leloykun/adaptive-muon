@@ -24,9 +24,22 @@ def zeropower_via_newtonschulz5(G, steps):
     if G.size(0) > G.size(1):
         X = X.T
 
-+    X = torch.einsum('ij,ij,ab->ab', G.type_as(X), X, X)  # Adaptive scaling,`(G * X).sum() * X` == (G.T @ X).trace() * X
++    X = torch.einsum('ij,ij->', G.type_as(X), X).clamp(-1., 1.) * X  # Adaptive scaling,`(G * X).sum() * X` == (G.T @ X).trace() * X
     return X
 ```
+
+## Benchmark Results
+
+In the following benchmarks, we compare the performance Muon, Adaptive Muon, Adam, Adaptive Adam (temporary name; it's just Adam but with the adaptive scaling trick above), and PSGD on the loss function `loss(x) = ||I - x^T x||^2` where `x` is a 2x2 matrix. We picked this loss function because it's simple but very messy.
+
+See [simple_benchmark.ipynb](./simple_benchmark.ipynb) for the code used to generate these plots. If you spot any mistakes, please don't hesitate to raise an issue or PR!
+
+### vs. Adam & PSGD
+
+![](images/optimizer_variants.png)
+![](images/optimizer_variants_bfloat16.png)
+
+### Effect of Momentum Decay
 
 ![](images/muon_by_momentum_decay_optimized_coeffs.png)
 ![](images/adaptive_muon_by_momentum_decay.png)
@@ -41,10 +54,6 @@ pip install git+https://github.com/leloykun/optax.git@fc--add-muon
 ```
 
 ## Sample Usage
-
-See [simple_benchmark.ipynb](./simple_benchmark.ipynb) for a simple benchmark of this optimizer (with and without `adaptive=True`) on the loss function `loss(x) = ||I - x^T x||^2`.
-
-Below is a sample usage of this optimizer:
 
 ```python
 import jax
