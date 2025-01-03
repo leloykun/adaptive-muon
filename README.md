@@ -34,10 +34,22 @@ In the following benchmarks, we compare the performance Muon, Adaptive Muon, Ada
 
 See [simple_benchmark.ipynb](./simple_benchmark.ipynb) for the code used to generate these plots. If you spot any mistakes, please don't hesitate to raise an issue or PR!
 
-### vs. Adam & PSGD
+### Muon vs. Adam vs. PSGD
+
+At $\beta = 0.95$ (`float32` & `bfloat16`):
 
 ![](images/optimizer_variants.png)
 ![](images/optimizer_variants_bfloat16.png)
+
+At $\beta = 0.5$ (`float32` & `bfloat16`):
+
+![](images/optimizer_variants_beta=0_5.png)
+![](images/optimizer_variants_bfloat16_beta=0_5.png)
+
+At $\beta = 0.0$ (`float32` & `bfloat16`):
+
+![](images/optimizer_variants_beta=0.png)
+![](images/optimizer_variants_bfloat16_beta=0.png)
 
 ### Effect of Momentum Decay
 
@@ -90,3 +102,15 @@ def body_fn(values: tuple[jnp.ndarray, optax.OptState], _):
 ```
 
 Note: the optimized coefficients here were obtained via a separate method I'll be sharing soon. It's a WIP and so you should just use the default coefficients for now (i.e. you can omit the `newton_schulz_coeffs` argument above).
+
+## Citation
+
+```bibtex
+@misc{adaptive_muon_2025,
+  author = {Franz Cesista},
+  title  = {Adaptive Muon},
+  year   = {2025},
+  url    = {https://github.com/leloykun/adaptive-muon},
+  note   = {Accessed: 2025-01-01}
+}
+```
