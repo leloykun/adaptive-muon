@@ -1,8 +1,8 @@
-# Adaptive Muon [WIP]
+# Dual Norm Correction: Improving Training with One Line of Code
 
-A one-line modification to [@KellerJordan](https://github.com/KellerJordan)'s [Muon optimizer](https://github.com/KellerJordan/modded-nanogpt) that allows the optimizer to adapt to the scale of the gradients as they change during training. This is done by scaling the orthogonalized gradient by the dual norm of the original gradient. The justification for this can be found in [@jxbz](https://github.com/jxbz)'s and co's papers, [Old Optimizer, New Norm: An Anthology](https://arxiv.org/abs/2409.20325) and [Modular Duality in Deep Learning](https://arxiv.org/abs/2410.21265).
+We propose a single-line modification to any (dualizer-based) optimizer that allows the optimizer to adapt to the scale of the gradients as they change during training. This is done by scaling the dualized gradient by the clipped dual norm of the original gradient. Following the [Modular Duality in Deep Learning](https://arxiv.org/abs/2410.21265) framework, we can show that this modification works so long as the dualized gradient is unit-scaled under some choice of norm. For Adam/Lion-variants, the corresponding norm is the Max-of-Max norm and the dualization process scales the elements of the gradient to unit norm. For Muon, the norm is the spectral norm and the dualization process maps the gradient to its nearest orthogonal matrix. Finally, we clip the dual norm to [0., 1.] or [-1., 1.] to prevent divergence.
 
-The following is the one-line diff to the original implementation. Note however, that all of my benchmarks were done using [my JAX implementation](https://github.com/google-deepmind/optax/pull/1126) and so there may be slight differences in performance & stability between the two implementations.
+The following is the one-line diff to the original implementation of [@KellerJordan](https://github.com/KellerJordan)'s [Muon optimizer](https://github.com/KellerJordan/modded-nanogpt). Note however, that all of my benchmarks were done using [my JAX implementation](https://github.com/google-deepmind/optax/pull/1126) and so there may be slight differences in performance & stability between the two implementations.
 
 ```diff
 def zeropower_via_newtonschulz5(G, steps):
@@ -24,9 +24,36 @@ def zeropower_via_newtonschulz5(G, steps):
     if G.size(0) > G.size(1):
         X = X.T
 
-+    X = torch.einsum('ij,ij,ab->ab', G.type_as(X), X, X)  # Adaptive scaling,`(G * X).sum() * X` == (G.T @ X).trace() * X
++    X = torch.einsum('ij,ij->', G.type_as(X), X).clamp(-1., 1.) * X  # Adaptive scaling,`(G * X).sum() * X` == (G.T @ X).trace() * X
     return X
 ```
+
+## Benchmark Results
+
+In the following benchmarks, we compare the performance Muon, Adaptive Muon, Adam, Adaptive Adam (temporary name; it's just Adam but with the adaptive scaling trick above), and PSGD on the loss function `loss(x) = ||I - x^T x||^2` where `x` is a 2x2 matrix. We picked this loss function because it's simple but very messy.
+
+See [simple_benchmark.ipynb](./simple_benchmark.ipynb) for the code used to generate these plots. If you spot any mistakes, please don't hesitate to raise an issue or PR!
+
+### Muon vs. Adam vs. PSGD
+
+![](images/optimizer_variants_bfloat16_beta=opt.png)
+
+At $\beta = 0.95$ (`float32` & `bfloat16`):
+
+![](images/optimizer_variants.png)
+![](images/optimizer_variants_bfloat16.png)
+
+At $\beta = 0.5$ (`float32` & `bfloat16`):
+
+![](images/optimizer_variants_beta=0_5.png)
+![](images/optimizer_variants_bfloat16_beta=0_5.png)
+
+At $\beta = 0.0$ (`float32` & `bfloat16`):
+
+![](images/optimizer_variants_beta=0.png)
+![](images/optimizer_variants_bfloat16_beta=0.png)
+
+### Effect of Momentum Decay
 
 ![](images/muon_by_momentum_decay_optimized_coeffs.png)
 ![](images/adaptive_muon_by_momentum_decay.png)
@@ -41,10 +68,6 @@ pip install git+https://github.com/leloykun/optax.git@fc--add-muon
 ```
 
 ## Sample Usage
-
-See [simple_benchmark.ipynb](./simple_benchmark.ipynb) for a simple benchmark of this optimizer (with and without `adaptive=True`) on the loss function `loss(x) = ||I - x^T x||^2`.
-
-Below is a sample usage of this optimizer:
 
 ```python
 import jax
@@ -81,3 +104,15 @@ def body_fn(values: tuple[jnp.ndarray, optax.OptState], _):
 ```
 
 Note: the optimized coefficients here were obtained via a separate method I'll be sharing soon. It's a WIP and so you should just use the default coefficients for now (i.e. you can omit the `newton_schulz_coeffs` argument above).
+
+## Citation
+
+```bibtex
+@misc{dual_norm_correction_2025,
+  author = {Franz Cesista},
+  title  = {Dual Norm Correction: Improving Training with One Line of Code},
+  year   = {2025},
+  url    = {https://github.com/leloykun/adaptive-muon},
+  note   = {Accessed: 2025-01-04}
+}
+```
