@@ -36,6 +36,7 @@ See [simple_benchmark.ipynb](./simple_benchmark.ipynb) for the code used to gene
 
 ### Muon vs. Adam vs. PSGD
 
+![](images/optimizer_variants_beta=opt.png)
 ![](images/optimizer_variants_bfloat16_beta=opt.png)
 
 At $\beta = 0.95$ (`float32` & `bfloat16`):
