@@ -24,7 +24,7 @@ def zeropower_via_newtonschulz5(G, steps):
     if G.size(0) > G.size(1):
         X = X.T
 
-+    X = torch.einsum('ij,ij->', G.type_as(X), X).clamp(-1., 1.) * X  # Adaptive scaling,`(G * X).sum() * X` == (G.T @ X).trace() * X
++    X = torch.einsum('ij,ij,ab->ab', G.type_as(X), X, X)  # Adaptive scaling,`(G * X).sum() * X` == (G.T @ X).trace() * X
     return X
 ```
 
